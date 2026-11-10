@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>Agenda Lucrativa · Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="thumbs.js"></script>
+<script src="thumbs.js"></script><script src="insights.js"></script>
 <style>
 :root{--bg:#0b1220;--pn:#121b2e;--pn2:#182340;--ln:#26324d;--tx:#e8edf7;--mu:#8e9bb5;--ac:#4c8dff;--ok:#2fbf71;--wa:#f2b33d;--bd:#ff6b5e}
 *{box-sizing:border-box;min-width:0}html,body{overflow-x:hidden;color-scheme:dark}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -41,11 +41,11 @@ img.tn{width:38px;height:48px;object-fit:cover;border-radius:5px;vertical-align:
 .hb{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12.5px}.hb .lb{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb .tr{width:40%;background:var(--pn2);border-radius:4px}.hb .tr div{height:10px;background:var(--ac);border-radius:4px}
 .ld{color:var(--mu);padding:40px;text-align:center}.err{color:var(--bd)}
 .seg{display:inline-flex;border:1px solid var(--ln);border-radius:8px;overflow:hidden}.seg button{background:var(--pn);color:var(--tx);border:0;padding:6px 11px;cursor:pointer;font-size:12.5px}.seg button.on{background:var(--ac);color:#fff}
-.hdr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.ib{display:flex;gap:12px;flex-wrap:wrap}.ip{flex:1;min-width:260px}.ok{color:#6fd39b}.pa{color:#f2c46b}.no{color:#ff8a7e}.pct{font-size:26px;font-weight:800}.bx{background:var(--pn2);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12.5px}.hdr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 footer{color:var(--mu);font-size:11.5px;padding:24px 18px;text-align:center}
 </style></head><body>
 <header><div class="top"><div><h1>📊 Funil Agenda Lucrativa</h1><div class="sub" id="upd">Carregando dados da planilha…</div></div>
-<div><button class="chip" id="btnR">↻ Atualizar agora</button></div></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><div class="seg" id="tabs"><button data-t="funil" class="on">Funil</button><button data-t="ins">Insights de copy</button></div><button class="chip" id="btnR">↻ Atualizar agora</button></div></div>
 <div class="fl" id="per"></div>
 <div class="fl"><span class="sub">De</span><input type="date" id="d1"><span class="sub">até</span><input type="date" id="d2">
 <select id="fc"><option value="">Todas as campanhas</option><option>ADV</option><option>QUENTE</option></select>
@@ -68,7 +68,7 @@ const addD=(d,n)=>{const t=new Date(d+'T12:00:00Z');t.setUTCDate(t.getUTCDate()+
 const rate=(a,b)=>b?a/b*100:NaN;
 function csv(t){const R=[];let r=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=''}else if(c=='\n'){r.push(f);R.push(r);r=[];f=''}else if(c!='\r')f+=c}if(f||r.length){r.push(f);R.push(r)}const h=R.shift()||[];return R.filter(x=>x.some(v=>v.trim())).map(x=>Object.fromEntries(h.map((k,i)=>[k.trim(),x[i]??''])))}
 async function load(){const out={};await Promise.all(Object.entries(CFG.tabs).map(async([k,[g,q]])=>{const u=`https://docs.google.com/spreadsheets/d/${CFG.sheet}/gviz/tq?tqx=out:csv&gid=${g}&tq=${encodeURIComponent(q)}&_=${Date.now()}`;const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(k+' '+r.status);out[k]=csv(await r.text())}));return out}
-let D=null,S={p:'acum',d1:null,d2:null,c:'',s:'',view:'gal',sort:'rank',chart:'sp'},charts={};
+let D=null,S={tab:'funil',p:'acum',d1:null,d2:null,c:'',s:'',view:'gal',sort:'rank',chart:'sp'},charts={};
 const M={sp:'Spend (Cost, Amount Spent)',imp:'Impressions',clk:'Action Link Clicks',lpv:'Action Landing Page View',ic:'Action Omni Initiated Checkout',px:'Action Omni Purchase',v3:'Action Video View',v15:'Video 15 Sec Watched Actions'};
 function prep(raw){
  const meta=raw.meta.map(r=>{const o={d:pd(r.Date),c:camp(r['Campaign Name']),s:r['Adset Name'],ad:r['Ad Name'],url:r['Instagram Permalink URL']};for(const[k,c]of Object.entries(M))o[k]=num(r[c]);o.pxv=num(r['Website Purchase Roas'])*o.sp;return o}).filter(r=>r.d);
@@ -102,6 +102,8 @@ function moves(R){const T=R.T,ads=R.ads.filter(a=>a.sp>0),tot=T.sp||0,X=CFG.AL,t
 function funnel(T){const st=[['Impressões',T.imp,'#5a7bb8'],['Cliques no link',T.clk,'#4c8dff'],['Visualizações da página',T.lpv,'#2f6ff0'],['Checkouts iniciados',T.ic,'#f2b33d'],['Vendas',T.vendas,'#2fbf71']];
  const mx=Math.log10(Math.max(T.imp,10));let p=null;return st.map(([n,v,c])=>{const w=v?Math.max(Math.log10(v+1)/mx*100,4):2;const cv=p==null?'':pc(rate(v,p));p=v;return`<div class="fr"><div class="n">${n}</div><div class="b"><div class="bar" style="width:${w}%;background:${c}">${nf(v)}</div></div><div class="c">${cv}</div></div>`}).join('')+'<div class="sub">Escala logarítmica. À direita, a conversão em relação à etapa anterior.</div>'}
 function render(){
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==S.tab));
+ if(S.tab=='ins'){renderIns();return}
  const rg=range(),R=agg(rg),T=R.T,mv=moves(R),t=today();
  const sets=[...new Set(D.meta.filter(r=>!S.c||r.c==S.c).map(r=>r.s))].sort();$('#fs').innerHTML='<option value="">Todos os conjuntos</option>'+sets.map(s=>`<option ${s==S.s?'selected':''}>${esc(s)}</option>`).join('');
  $('#d1').value=rg[0];$('#d2').value=rg[1];
@@ -147,6 +149,17 @@ function render(){
  $('#so').onchange=e=>{S.sort=e.target.value;render()};
  document.querySelectorAll('#per .chip').forEach(b=>b.classList.toggle('on',b.dataset.p==S.p));
  const hh=JSON.stringify(S);history.replaceState(null,'','#'+new URLSearchParams({p:S.p,c:S.c,s:S.s,v:S.view}).toString())}
+function renderIns(){const I=window.INSIGHTS;if(!I){$('#app').innerHTML='<div class="pn">Sem análise publicada.</div>';return}
+ const R=agg(range()),by={};R.ads.forEach(a=>{const o=by[a.ad]??={sp:0,ck:0,vendas:0,clk:0,imp:0,urls:[]};o.sp+=a.sp;o.ck+=a.ck;o.vendas+=a.vendas;o.clk+=a.clk;o.imp+=a.imp;if(a.url)o.urls.push([a.c,a.url])});
+ const L=Object.entries(I.criativos).sort((a,b)=>b[1].pct-a[1].pct),cor=p=>p>=55?'ok':p>=40?'pa':'no',P=I.pagina,li=a=>a.map(x=>`<li>${esc(x)}</li>`).join('');
+ $('#app').innerHTML=`<h2>🧠 Insights de copy: anúncio x página de vendas</h2><div class="pn sub">${esc(I.escopo)} ${esc(I.metodo)} Análise de ${esc(I.atualizado)}; gasto, CTR e checkouts ao lado são ao vivo (com o filtro de período).</div>
+ <h2>💡 Principais achados</h2><div class="pn"><ol style="margin:0 0 0 18px">${li(I.achados)}</ol></div>
+ <h2>📄 Página de vendas</h2><div class="pn"><a href="${P.url}" target="_blank">${esc(P.url)} ↗</a><div class="bx"><b>Hook:</b> ${esc(P.hook)}</div><div class="bx"><b>Promessa:</b> ${esc(P.promessa)}</div><div class="bx"><b>Mecanismo:</b> ${esc(P.mecanismo)}</div><div class="bx"><b>Dor:</b> ${esc(P.dor)}</div><div class="bx"><b>Desejo:</b> ${esc(P.desejo)}</div><div class="bx"><b>Oferta:</b> ${esc(P.oferta)}</div><div class="bx"><b>CTA:</b> ${esc(P.cta)}</div><div class="bx"><b>Público:</b> ${esc(P.publico)}</div><div class="bx"><b>Legenda dos anúncios:</b> ${esc(I.legenda)}</div></div>
+ <h2>📊 O que os anúncios cobrem da página (12 roteiros)</h2><div class="pn">${I.cobertura.map(c=>{const v=(c.n+c.p*.5)/12*100;return`<div class="hb"><span class="lb" title="${esc(c.el)}">${esc(c.tipo)}: ${esc(c.el)}</span><div class="tr"><div style="width:${Math.max(v,1)}%;background:${v<20?'#ff6b5e':v<50?'#f2b33d':'#2fbf71'}"></div></div><b>${c.n} + ${c.p} em parte</b></div>`}).join('')}<div class="sub">Quantos roteiros citam o elemento por completo e quantos citam em parte.</div></div>
+ <h2>🎬 Criativo a criativo (maior aderência primeiro)</h2>${L.map(([k,c])=>{const m=by[k]||{sp:0,ck:0,vendas:0,clk:0,imp:0,urls:[]};return`<div class="pn" style="margin-bottom:10px"><div class="ib"><div style="min-width:130px"><div class="pct ${cor(c.pct)}">${c.pct}%</div><div class="sub">aderência à página</div><b>${esc(k)}</b><div class="sub">${m.urls.map(([v,u])=>`<a href="${u}" target="_blank">${v} ↗</a>`).join(' · ')}</div><div class="sub" style="margin-top:6px">Gasto ${brl(m.sp)}<br>CTR ${pc(rate(m.clk,m.imp))}<br>Checkouts ${nf(m.ck)} · Vendas ${m.vendas}</div></div>
+ <div class="ip"><div class="bx"><b>Hook:</b> "${esc(c.hook)}"</div><div class="bx"><b>Ângulo:</b> ${esc(c.angulo)}</div><div class="bx"><b>Promessa:</b> ${esc(c.promessa)}</div><div class="bx"><b>Dor:</b> ${esc(c.dor)}</div><div class="bx"><b>Desejo:</b> ${esc(c.desejo)}</div><div class="bx"><b>CTA:</b> ${esc(c.cta)}</div></div>
+ <div class="ip"><div class="bx"><b class="ok">✓ Bate com a página</b><ul style="margin:4px 0 0 16px">${li(c.bate)||'<li>nada</li>'}</ul></div><div class="bx"><b class="pa">◐ Em parte</b><ul style="margin:4px 0 0 16px">${li(c.parcial)||'<li>nada</li>'}</ul></div><div class="bx"><b class="no">✗ Não aparece</b><ul style="margin:4px 0 0 16px">${li(c.falta)}</ul></div>${c.contra.length?`<div class="bx" style="border:1px solid #ff6b5e"><b class="no">⚠ Contradiz a página</b><ul style="margin:4px 0 0 16px">${li(c.contra)}</ul></div>`:''}</div></div></div>`}).join('')}`}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render()});
 $('#per').innerHTML=[['hoje','Hoje'],['ontem','Ontem'],['7d','7 dias'],['acum','Acumulado']].map(([k,l])=>`<button class="chip" data-p="${k}">${l}</button>`).join('');
 document.querySelectorAll('#per .chip').forEach(b=>b.onclick=()=>{S.p=b.dataset.p;render()});
 $('#d1').onchange=e=>{S.p='custom';S.d1=e.target.value;S.d2=$('#d2').value;render()};$('#d2').onchange=e=>{S.p='custom';S.d2=e.target.value;S.d1=$('#d1').value;render()};
