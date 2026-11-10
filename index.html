@@ -53,8 +53,9 @@ footer{color:var(--mu);font-size:11.5px;padding:24px 18px;text-align:center}
 <main id="app"><div class="ld">Carregando…</div></main>
 <footer>Dados lidos ao vivo da planilha "VENDAS e CHECKOUTS - Agenda Lucrativa - 11.2026" · atualização automática a cada 5 min · o dia corrente é parcial.</footer>
 <script>
-const CFG={sheet:'1bYmWzzWEkUP6NiVNP32jjfv9A9vIOZzCl4BxQiEcKME',ticket:null,refreshMin:5,
- tabs:{meta:[1225783986,'select *'],vendas:[121251726,'select C,D,G,H,I,J,L'],ck:[1526104567,'select B,D,E,F,K,L,M'],pq:[1162156478,'select C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R']}};
+const CFG={sheet:'1bYmWzzWEkUP6NiVNP32jjfv9A9vIOZzCl4BxQiEcKME',ticket:27,cpaAlvo:27,inicio:'2026-11-09',refreshMin:5,
+ AL:{cpaMult:1.5,semVendaMax:300,adReais:80,adPct:8,ckSemCompra:3,quedaCtr:30,txCkMin:5,txCkVisitas:100,roasMin:1,roasDias:3,estavel:5},REF:{ctr:1,carreg:75,txck:8,ckv:25},
+ tabs:{meta:[1225783986,'select *'],vendas:[121251726,'select C,D,G,H,I,J,L'],ck:[1526104567,'select B,D,E,F,J,L,M'],pq:[1162156478,'select C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R']}};
 const $=s=>document.querySelector(s), TH=window.THUMBS||{};
 const brl=x=>x==null||!isFinite(x)?'–':'R$ '+x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const pc=x=>!isFinite(x)?'–':x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
@@ -71,14 +72,14 @@ let D=null,S={p:'acum',d1:null,d2:null,c:'',s:'',view:'gal',sort:'rank',chart:'s
 const M={sp:'Spend (Cost, Amount Spent)',imp:'Impressions',clk:'Action Link Clicks',lpv:'Action Landing Page View',ic:'Action Omni Initiated Checkout',px:'Action Omni Purchase',v3:'Action Video View',v15:'Video 15 Sec Watched Actions'};
 function prep(raw){
  const meta=raw.meta.map(r=>{const o={d:pd(r.Date),c:camp(r['Campaign Name']),s:r['Adset Name'],ad:r['Ad Name'],url:r['Instagram Permalink URL']};for(const[k,c]of Object.entries(M))o[k]=num(r[c]);o.pxv=num(r['Website Purchase Roas'])*o.sp;return o}).filter(r=>r.d);
- const seen=new Set(),vendas=[];for(const r of raw.vendas){const d=pd(r.DATA);if(!d)continue;const e=(r.EMAIL||'').trim().toLowerCase()||Math.random();if(seen.has(e))continue;seen.add(e);vendas.push({d,c:camp(r.UTM_CAMPAIGN),s:r.UTM_MEDIUM,ad:(r.UTM_CONTENT||'').trim()||'(sem UTM)',pq:/^s/i.test(r['RESPONDEU PESQUISA']||'')})}
- const ck=raw.ck.map(r=>({d:pd(r.DATA),c:camp(r.UTM_CAMPAIGN),s:r.UTM_MEDIUM,ad:(r.UTM_CONTENT||'').trim()||'(sem UTM)',comprou:/^s/i.test(r['COMPROU?']||''),at:(r.ATENDENTE||'').trim()})).filter(r=>r.d);
+ const seen=new Set(),vendas=[];for(const r of raw.vendas){const d=pd(r.DATA);if(!d)continue;const e=(r.EMAIL||'').trim().toLowerCase()||Math.random();if(seen.has(e))continue;seen.add(e);vendas.push({email:e,d,c:camp(r.UTM_CAMPAIGN),s:r.UTM_MEDIUM,ad:(r.UTM_CONTENT||'').trim()||'(sem UTM)',pq:/^s/i.test(r['RESPONDEU PESQUISA']||'')})}
+ const ck=raw.ck.map(r=>({email:(r.EMAIL||'').trim().toLowerCase(),d:pd(r.DATA),c:camp(r.UTM_CAMPAIGN),s:r.UTM_MEDIUM,ad:(r.UTM_CONTENT||'').trim()||'(sem UTM)',comprou:/^s/i.test(r['COMPROU?']||''),at:(r.ATENDENTE||'').trim()})).filter(r=>r.d);
  const pq=raw.pq.map(r=>({...r,d:pd(r['Submitted at'])})).filter(r=>r.d);
- const ds=[...meta.map(r=>r.d),...vendas.map(r=>r.d)].sort();return{meta,vendas,ck,pq,ini:ds[0]||today()}}
+ return{meta:meta.filter(r=>r.d>=CFG.inicio),vendas:vendas.filter(r=>r.d>=CFG.inicio),ck:ck.filter(r=>r.d>=CFG.inicio),pq:pq.filter(r=>r.d>=CFG.inicio),ini:CFG.inicio}}
 function range(){const t=today();switch(S.p){case'hoje':return[t,t];case'ontem':return[addD(t,-1),addD(t,-1)];case'7d':return[addD(t,-6),t];case'custom':return[S.d1||D.ini,S.d2||t];default:return[D.ini,t]}}
 function filt(a,[x,y]){return a.filter(r=>r.d>=x&&r.d<=y&&(!S.c||r.c==S.c)&&(!S.s||r.s==S.s))}
 function agg(rg){const m=filt(D.meta,rg),v=filt(D.vendas,rg),k=filt(D.ck,rg);const T={sp:0,imp:0,clk:0,lpv:0,ic:0,px:0,v3:0,v15:0,pxv:0};m.forEach(r=>{for(const x in T)T[x]+=r[x]});
- T.vendas=v.length;T.fat=CFG.ticket?v.length*CFG.ticket:T.pxv;T.fonte=CFG.ticket?'ticket':'pixel';T.ckp=k.length;T.ckab=k.filter(r=>!r.comprou).length;T.cksa=k.filter(r=>!r.comprou&&!r.at).length;
+ T.vendas=v.length;T.fat=v.length*CFG.ticket;T.ckp=k.length;const em=new Set(D.vendas.filter(r=>r.d<=rg[1]).map(r=>r.email));const sem=k.filter(r=>!r.comprou&&!em.has(r.email));T.ckab=sem.length;T.cksa=sem.filter(r=>!r.at).length;
  const A={};const key=r=>r.ad+'|'+r.c;const g=r=>A[key(r)]??={ad:r.ad,c:r.c,url:'',sp:0,imp:0,clk:0,lpv:0,ic:0,v3:0,vendas:0,ckp:0};
  m.forEach(r=>{const a=g(r);a.url=r.url||a.url;['sp','imp','clk','lpv','ic','v3'].forEach(x=>a[x]+=r[x])});v.forEach(r=>g(r).vendas++);k.forEach(r=>g(r).ckp++);
  const ads=Object.values(A).map(a=>({...a,ck:Math.max(a.ic,a.ckp),ctr:rate(a.clk,a.imp),hook:rate(a.v3,a.imp),cpa:a.vendas?a.sp/a.vendas:null,cpck:Math.max(a.ic,a.ckp)?a.sp/Math.max(a.ic,a.ckp):null}));
@@ -86,25 +87,38 @@ function agg(rg){const m=filt(D.meta,rg),v=filt(D.vendas,rg),k=filt(D.ck,rg);con
  return{T,ads,sets:Object.values(sets).filter(s=>s.sp||s.vendas),m,v,k}}
 function kpi(l,v,s='',c=''){return`<div class="k ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`}
 function thumb(u,cls){const sc=(u||'').replace(/\/$/,'').split('/').pop();const b=TH[sc];return b?`<img class="${cls}" src="data:image/jpeg;base64,${b}" loading="lazy">`:`<div class="${cls} ph">sem prévia</div>`}
-function moves(R){const T=R.T,ads=R.ads.filter(a=>a.sp>0),tot=T.sp||1,L=[];
- const mortos=ads.filter(a=>!a.vendas&&!a.ck&&a.sp>=Math.max(30,.05*tot)).sort((a,b)=>b.sp-a.sp);
- if(mortos.length){const g=mortos.reduce((s,a)=>s+a.sp,0);L.push({t:'Cortar o gasto que não gera checkout',p:`${mortos.length} anúncio(s) consumiram ${brl(g)} (${(g/tot*100).toFixed(0)}% do investimento) sem checkout nem venda: ${mortos.slice(0,4).map(a=>`${a.ad} ${a.c} (${brl(a.sp)})`).join(', ')}. Pausar ou reduzir e mover a verba para quem já gera checkout.`,i:'Alto',e:'Baixo'})}
- const vend=ads.filter(a=>a.vendas).sort((a,b)=>a.cpa-b.cpa);
- if(vend.length){const v=vend[0];L.push({t:`Escalar o criativo que já vendeu: ${v.ad} (${v.c})`,p:`${v.vendas} venda(s) com ${brl(v.sp)} investidos (CPA ${brl(v.cpa)}, ${nf(v.imp)} impressões).${v.vendas<3?' Amostra pequena: é sinal, não prova.':''} Garantir entrega (duplicar nos outros conjuntos ou subir orçamento) e criar 2 a 3 variações do gancho.`,i:'Alto',e:'Médio'})}
- else{const c=ads.filter(a=>a.ck).sort((a,b)=>a.cpck-b.cpck)[0];if(c)L.push({t:`Concentrar no criativo que mais leva ao checkout: ${c.ad} (${c.c})`,p:`${nf(c.ck)} checkout(s) a ${brl(c.cpck)} cada. Criar variações do gancho.`,i:'Alto',e:'Médio'})}
- const txck=rate(T.ic,T.lpv);if(T.lpv>=50&&txck<5)L.push({t:'Destravar a página: LP → checkout',p:`Só ${pc(txck)} de quem viu a página iniciou o checkout (${nf(T.ic)} de ${nf(T.lpv)}). É o maior vazamento do funil: revisar promessa acima da dobra, preço visível e botão de compra antes de abrir mais tráfego.`,i:'Alto',e:'Médio'});
- if(T.cksa)L.push({t:'Recuperar checkouts abandonados',p:`${T.cksa} checkout(s) sem compra e sem atendente na planilha. Chamar no WhatsApp ainda hoje: é a venda mais barata do funil.`,i:'Médio',e:'Baixo'});
- const car=rate(T.lpv,T.clk);if(car<70&&T.clk>=30)L.push({t:'Melhorar o carregamento da página',p:`Só ${pc(car)} dos cliques viram visualização da página. Comprimir imagens e vídeo da LP.`,i:'Médio',e:'Baixo'});
- if(rate(T.clk,T.imp)<1&&T.imp>2000)L.push({t:'Renovar ganchos dos criativos',p:`CTR de ${pc(rate(T.clk,T.imp))} está baixo. Testar novos ganchos nos 3 primeiros segundos.`,i:'Médio',e:'Médio'});
- return L.slice(0,3)}
+function moves(R){const T=R.T,ads=R.ads.filter(a=>a.sp>0),tot=T.sp||0,X=CFG.AL,tk=CFG.ticket,C=[],conf=e=>e<=2?'baixa':e<10?'média':'alta';
+ const lim=Math.min(X.adReais,X.adPct/100*tot),mortos=ads.filter(a=>a.sp>lim&&!a.ck&&!a.vendas).sort((a,b)=>b.sp-a.sp);
+ if(mortos.length&&tot){const g=mortos.reduce((s,a)=>s+a.sp,0),lp=mortos.reduce((s,a)=>s+a.lpv,0),esp=lp*rate(T.ic,T.lpv)/100||0;C.push({v:g,t:`Pausar ${mortos.slice(0,3).map(a=>a.ad+' ('+a.c+')').join(', ')}`,p:`Gastou ${brl(g)} (${(g/tot*100).toFixed(1).replace('.',',')}% da verba) sem nenhum checkout.`+(esp<2?` Com ${nf(lp)} visitas, a taxa média esperaria só ${esp.toFixed(1).replace('.',',')} checkout: é só um sinal.`:''),c:esp<2?'baixa':'média'})}
+ const bons=ads.filter(a=>a.vendas).sort((a,b)=>a.cpa-b.cpa);
+ if(bons.length&&bons[0].cpa<=CFG.cpaAlvo*1.5){const b=bons[0];C.push({v:(mortos.reduce((s,a)=>s+a.sp,0)*0.9)||tot*0.1,t:`Garantir entrega para o ${b.ad} (${b.c}) e criar variações do mesmo gancho`,p:`${b.vendas} venda(s) com ${brl(b.sp)} (CPA ${brl(b.cpa)}, ${nf(b.imp)} impressões).`+(b.vendas<=2?' Por enquanto é só um sinal.':''),c:conf(b.vendas)})}
+ else if(!bons.length){const c=ads.filter(a=>a.ck).sort((a,b)=>a.cpck-b.cpck)[0];if(c)C.push({v:tot*0.1,t:`Concentrar verba no ${c.ad} (${c.c})`,p:`${nf(c.ck)} checkout(s) a ${brl(c.cpck)} cada.`+(c.ck<=2?' É só um sinal.':''),c:conf(c.ck)})}
+ const et=[['ctr','Impressão para clique',rate(T.clk,T.imp)],['carreg','Clique para visita à página',rate(T.lpv,T.clk)],['txck','Visita à página para checkout',rate(T.ic,T.lpv)],['ckv','Checkout para compra',rate(T.vendas,T.ic)]].filter(e=>isFinite(e[2])).map(e=>({k:e[0],rot:e[1],v:e[2],ref:CFG.REF[e[0]],r:e[2]/CFG.REF[e[0]]}));
+ const p=et.sort((a,b)=>a.r-b.r)[0];
+ if(p&&p.r<1&&tot){const txt={txck:['Melhorar a passagem da página para o checkout',`Só ${pc(p.v)} de quem visita a página inicia o checkout (${nf(T.ic)} de ${nf(T.lpv)}). É onde o funil mais perde.`],ckv:['Melhorar o checkout',`Só ${pc(p.v)} dos checkouts viram compra.`],carreg:['Acelerar o carregamento da página',`Só ${pc(p.v)} dos cliques carregam a página.`],ctr:['Renovar os ganchos dos criativos',`CTR de ${pc(p.v)}.`]}[p.k];
+  C.push({v:tot*(1-p.r),t:txt[0],p:txt[1]+` Referência: ${p.ref}%.`,c:'média'})}
+ if(T.cksa)C.push({v:T.cksa*tk,t:'Chamar no WhatsApp quem iniciou o checkout e não comprou',p:`${T.cksa} checkout(s) sem compra e sem atendente. Com ticket de ${brl(tk)}, são até ${brl(T.cksa*tk)} em jogo.`,c:'alta'});
+ return C.sort((a,b)=>b.v-a.v).slice(0,3)}
 function funnel(T){const st=[['Impressões',T.imp,'#5a7bb8'],['Cliques no link',T.clk,'#4c8dff'],['Visualizações da página',T.lpv,'#2f6ff0'],['Checkouts iniciados',T.ic,'#f2b33d'],['Vendas',T.vendas,'#2fbf71']];
  const mx=Math.log10(Math.max(T.imp,10));let p=null;return st.map(([n,v,c])=>{const w=v?Math.max(Math.log10(v+1)/mx*100,4):2;const cv=p==null?'':pc(rate(v,p));p=v;return`<div class="fr"><div class="n">${n}</div><div class="b"><div class="bar" style="width:${w}%;background:${c}">${nf(v)}</div></div><div class="c">${cv}</div></div>`}).join('')+'<div class="sub">Escala logarítmica. À direita, a conversão em relação à etapa anterior.</div>'}
 function render(){
  const rg=range(),R=agg(rg),T=R.T,mv=moves(R),t=today();
  const sets=[...new Set(D.meta.filter(r=>!S.c||r.c==S.c).map(r=>r.s))].sort();$('#fs').innerHTML='<option value="">Todos os conjuntos</option>'+sets.map(s=>`<option ${s==S.s?'selected':''}>${esc(s)}</option>`).join('');
  $('#d1').value=rg[0];$('#d2').value=rg[1];
- const av=[];if(rg[1]==t)av.push(`Hoje (${t.slice(8)}/${t.slice(5,7)}) é parcial no Meta.`);if(T.vendas<10)av.push(`Amostra pequena: ${T.vendas} venda(s) no período. Use como sinal, não como veredito.`);
- if(T.fonte=='pixel')av.push('Ticket não configurado: faturamento e ROAS usam o valor de compra do pixel da Meta.');if(Math.round(T.px)!=T.vendas)av.push(`Pixel registra ${nf(T.px)} compra(s); planilha de vendas tem ${T.vendas}.`);
+ const av=[],X=CFG.AL,dias=Math.round((new Date(t)-new Date(CFG.inicio))/864e5)+1,cpa=T.vendas?T.sp/T.vendas:null,lim=CFG.cpaAlvo*X.cpaMult;
+ if(rg[1]==t)av.push(`Hoje (${t.slice(8)}/${t.slice(5,7)}) é parcial no Meta.`);
+ if(T.vendas&&cpa>lim)av.push(`CPA alto: ${brl(cpa)}, acima do limite de ${brl(lim)} (1,5 vez o CPA-alvo).`);if(!T.vendas&&T.sp>lim)av.push(`Gasto sem venda: ${brl(T.sp)} investidos sem nenhuma venda.`);
+ const limAd=Math.min(X.adReais,X.adPct/100*T.sp);R.ads.filter(a=>a.sp>limAd&&!a.ck&&!a.vendas).forEach(a=>av.push(`${a.ad} (${a.c}) gastou ${brl(a.sp)} sem nenhum checkout.`));
+ if(Math.round(T.px)!=T.vendas)av.push(`O pixel conta ${nf(T.px)} compra(s) e a planilha de vendas tem ${T.vendas}.`);
+ if(T.cksa>=X.ckSemCompra)av.push(`Há ${T.cksa} checkouts sem compra e sem atendente: dá para recuperar pelo WhatsApp.`);
+ if(T.lpv>=X.txCkVisitas&&rate(T.ic,T.lpv)<X.txCkMin)av.push(`Taxa de checkout baixa: ${pc(rate(T.ic,T.lpv))} (${nf(T.ic)} de ${nf(T.lpv)} visitas).`);
+ if(dias>=X.roasDias&&T.sp&&T.fat/T.sp<X.roasMin)av.push(`ROAS de ${(T.fat/T.sp).toFixed(2).replace('.',',')} com ${dias} dias de campanha.`);
+ if(dias<3)av.push(`A campanha tem ${dias} dia(s), então os números ainda vão oscilar bastante.`);else if(T.lpv<100||T.clk<30||T.ic<5)av.push('Amostra pequena: as taxas ainda são sinal, não conclusão.');
+ const ont=addD(t,-1),prev=[2,3,4].map(i=>addD(t,-i)).filter(d=>d>=CFG.inicio),comp=[];
+ if(ont>=CFG.inicio&&prev.length){const O=agg([ont,ont]).T,Mb=agg([prev[prev.length-1],prev[0]]).T,tx=b=>({roas:b.sp?b.fat/b.sp:null,cpa:b.vendas?b.sp/b.vendas:null,ctr:rate(b.clk,b.imp),txck:rate(b.ic,b.lpv),conv:rate(b.vendas,b.lpv),tm:b.vendas?b.fat/b.vendas:null});const o=tx(O),m=tx(Mb);
+  [['roas','ROAS',0],['cpa','CPA',1],['ctr','CTR',0],['txck','Tx checkout',0],['conv','Tx conversão',0],['tm','Ticket médio',0]].forEach(([k,l,menor])=>{if(o[k]==null||!m[k]||!isFinite(o[k])||!isFinite(m[k])){comp.push(`${l} sem dado`);return}const d=(o[k]-m[k])/m[k]*100;const sy=Math.abs(d)<=X.estavel?'▬':(d>0?'▲':'▼');comp.push(`${l} ${sy} ${Math.abs(d).toFixed(1).replace('.',',')}%`)});
+  const ctrd=(o.ctr-m.ctr)/m.ctr*100;if(isFinite(ctrd)&&ctrd<-X.quedaCtr)av.push(`Queda de CTR: ontem ${pc(o.ctr)}, média ${pc(m.ctr)}.`)}
+ const compTxt=comp.length?`Ontem vs média de ${prev.length} dia(s): `+comp.join(', '):'Comparativo: sem histórico ainda (aparece a partir do quarto dia).';
  const days=[];for(let d=rg[0];d<=rg[1];d=addD(d,1))days.push(d);
  const dv=days.map(d=>{const a=agg([d,d]).T;return{d,sp:a.sp,vendas:a.vendas,ic:a.ic,ctr:rate(a.clk,a.imp),cpa:a.vendas?a.sp/a.vendas:null,txck:rate(a.ic,a.lpv),clk:a.clk}});
  let ads=R.ads.filter(a=>a.sp>0||a.vendas);const so={rank:(a,b)=>b.vendas-a.vendas||b.ck-a.ck||b.lpv-a.lpv||a.sp-b.sp,sp:(a,b)=>b.sp-a.sp,ctr:(a,b)=>(b.ctr||0)-(a.ctr||0),hook:(a,b)=>(b.hook||0)-(a.hook||0),cpck:(a,b)=>(a.cpck??1e9)-(b.cpck??1e9)};ads.sort(so[S.sort]);
@@ -112,10 +126,10 @@ function render(){
  const pqr=filt(D.pq.map(r=>({...r,c:camp(r.utm_campaign),s:r.utm_medium})),[rg[0],rg[1]]);
  const Q=['Renda','Area de atuação','Produto','Você pensa em criar uma mentoria','Participações','Problema','Idade','Sexo'];
  $('#app').innerHTML=`
- <div class="g">${kpi('Investimento',brl(T.sp),'Meta Ads','hi')}${kpi('Vendas',nf(T.vendas),`pixel: ${nf(T.px)}`,'hi')}${kpi('Faturamento',brl(T.fat),T.fonte=='pixel'?'valor do pixel':'vendas × ticket','hi')}${kpi('ROAS',T.sp?(T.fat/T.sp).toFixed(2).replace('.',','):'–','faturamento / investimento','hi')}${kpi('CPA',brl(T.vendas?T.sp/T.vendas:null),'custo por venda','hi')}</div>
+ <div class="g">${kpi('Investimento',brl(T.sp),'Meta Ads','hi')}${kpi('Vendas',nf(T.vendas),`pixel: ${nf(T.px)}`,'hi')}${kpi('Faturamento',brl(T.fat),'vendas × ticket R$ 27 · pixel '+brl(T.pxv),'hi')}${kpi('ROAS',T.sp?(T.fat/T.sp).toFixed(2).replace('.',','):'–','faturamento / investimento','hi')}${kpi('CPA',T.vendas?brl(T.sp/T.vendas):'sem venda ainda','custo por venda · alvo '+brl(CFG.cpaAlvo),'hi')}${kpi('Ticket médio',T.vendas?brl(T.fat/T.vendas):'sem venda ainda','faturamento / vendas','hi')}</div>
  <div class="g" style="margin-top:10px">${kpi('CPM',brl(T.imp?T.sp/T.imp*1000:null),nf(T.imp)+' impressões')}${kpi('CTR',pc(rate(T.clk,T.imp)),'CPC '+brl(T.clk?T.sp/T.clk:null))}${kpi('Tx Carregamento',pc(rate(T.lpv,T.clk)),`${nf(T.lpv)} de ${nf(T.clk)} cliques`)}${kpi('Tx Checkout',pc(rate(T.ic,T.lpv)),`${nf(T.ic)} de ${nf(T.lpv)} visitas`)}${kpi('Tx Conversão',pc(rate(T.vendas,T.lpv)),'vendas / visitas · ck→venda '+pc(rate(T.vendas,T.ic)))}${kpi('Gancho 3s',pc(rate(T.v3,T.imp)),'views 3s / impressões')}${kpi('Retenção 15s',pc(rate(T.v15,T.v3)),'15s / 3s')}${kpi('Checkouts a recuperar',nf(T.cksa),`${nf(T.ckab)} sem compra · ${nf(T.ckp)} na planilha`)}</div>
- ${av.length?`<div class="al"><b>Atenção</b><ul>${av.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
- <h2>⚡ Top 3 movimentos 80/20 (recalculados para o filtro atual)</h2>${mv.map((m,i)=>`<div class="mv"><div class="i">${i+1}</div><div><div class="t">${esc(m.t)}</div><div>${esc(m.p)}</div><span class="pill">Impacto: ${m.i}</span><span class="pill">Esforço: ${m.e}</span></div></div>`).join('')||'<div class="pn">nada</div>'}
+ <div class="al"><b>Avisos</b><ul>${av.map(x=>`<li>${esc(x)}</li>`).join('')||'<li>Nenhum alerta hoje.</li>'}</ul></div><div class="pn" style="margin-top:10px">📊 ${esc(compTxt)}</div>
+ <h2>⚡ Top 3 movimentos 80/20 (mesma regra do relatório, recalculada para o filtro)</h2>${mv.map((m,i)=>`<div class="mv"><div class="i">${i+1}</div><div><div class="t">${esc(m.t)}</div><div>${esc(m.p)}</div><span class="pill">Confiança: ${m.c}</span></div></div>`).join('')||'<div class="pn">nada</div>'}
  <div class="two"><div><h2>🔻 Funil</h2><div class="pn">${funnel(T)}</div></div>
  <div><div class="hdr"><h2>📅 Dia a dia</h2><div class="seg" id="segc">${[['sp','Investimento'],['vendas','Vendas'],['ic','Checkouts'],['ctr','CTR'],['txck','Tx checkout'],['cpa','CPA']].map(([k,l])=>`<button data-k="${k}" class="${S.chart==k?'on':''}">${l}</button>`).join('')}</div></div><div class="pn"><canvas id="ch" height="190"></canvas></div></div></div>
  <h2>🎯 Campanhas e conjuntos</h2><div class="pn tw"><table><tr><th>Campanha</th><th>Conjunto</th><th class="r">Investido</th><th class="r">CPM</th><th class="r">CTR</th><th class="r">Visitas</th><th class="r">Checkouts</th><th class="r">Tx ck</th><th class="r">Vendas</th><th class="r">CPA</th></tr>
