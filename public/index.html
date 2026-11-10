@@ -86,7 +86,7 @@ function agg(rg){const m=filt(D.meta,rg),v=filt(D.vendas,rg),k=filt(D.ck,rg);con
  const sets={};const gs=(c,s)=>sets[c+'|'+s]??={c,s,sp:0,imp:0,clk:0,lpv:0,ic:0,vendas:0};m.forEach(r=>{const o=gs(r.c,r.s);['sp','imp','clk','lpv','ic'].forEach(x=>o[x]+=r[x])});v.forEach(r=>gs(r.c,r.s).vendas++);
  return{T,ads,sets:Object.values(sets).filter(s=>s.sp||s.vendas),m,v,k}}
 function kpi(l,v,s='',c=''){return`<div class="k ${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`}
-function thumb(u,cls){const sc=(u||'').replace(/\/$/,'').split('/').pop();const b=TH[sc];return b?`<img class="${cls}" src="data:image/jpeg;base64,${b}" loading="lazy">`:`<div class="${cls} ph">sem prévia</div>`}
+function thumb(u,cls){const sc=(u||'').replace(/\/$/,'').split('/').pop();const b=Array.isArray(TH)?TH.includes(sc):TH[sc];return b?`<img class="${cls}" src="t/${sc}.jpg" loading="lazy">`:`<div class="${cls} ph">sem prévia</div>`}
 function moves(R){const T=R.T,ads=R.ads.filter(a=>a.sp>0),tot=T.sp||0,X=CFG.AL,tk=CFG.ticket,C=[],conf=e=>e<=2?'baixa':e<10?'média':'alta';
  const lim=Math.min(X.adReais,X.adPct/100*tot),mortos=ads.filter(a=>a.sp>lim&&!a.ck&&!a.vendas).sort((a,b)=>b.sp-a.sp);
  if(mortos.length&&tot){const g=mortos.reduce((s,a)=>s+a.sp,0),lp=mortos.reduce((s,a)=>s+a.lpv,0),esp=lp*rate(T.ic,T.lpv)/100||0;C.push({v:g,t:`Pausar ${mortos.slice(0,3).map(a=>a.ad+' ('+a.c+')').join(', ')}`,p:`Gastou ${brl(g)} (${(g/tot*100).toFixed(1).replace('.',',')}% da verba) sem nenhum checkout.`+(esp<2?` Com ${nf(lp)} visitas, a taxa média esperaria só ${esp.toFixed(1).replace('.',',')} checkout: é só um sinal.`:''),c:esp<2?'baixa':'média'})}
